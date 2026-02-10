@@ -1,54 +1,9 @@
 from flask import Blueprint, request, jsonify, g
 from ..database import query_db, execute_db, dicts_from_rows, dict_from_row
-from ..middleware import jwt_required, role_required, get_patient_id_for_user, get_doctor_id_for_user, log_audit
+from ..middleware import jwt_required, role_required, get_patient_id_for_user, log_audit
 from ..utils import validate_required, parse_pagination
 
 clinical_bp = Blueprint('clinical', __name__, url_prefix='/api')
-
-
-# ========== DIAGNOSES ==========
-
-@clinical_bp.route('/diagnoses', methods=['GET'])
-@jwt_required
-def list_diagnoses():
-    patient_id = request.args.get('patient_id', type=int)
-    role = g.current_user['role']
-
-    if role == 'Patient':
-        patient_id = get_patient_id_for_user(g.current_user['id'])
-
-    if not patient_id:
-        return jsonify({'error': 'patient_id required'}), 400
-
-    diagnoses = dicts_from_rows(query_db(
-        '''SELECT d.*, doc.first_name || ' ' || doc.last_name as doctor_name
-           FROM diagnoses d LEFT JOIN doctors doc ON d.diagnosed_by=doc.id
-           WHERE d.patient_id=? ORDER BY d.diagnosed_date DESC''', [patient_id]))
-
-    return jsonify({'diagnoses': diagnoses}), 200
-
-
-@clinical_bp.route('/diagnoses', methods=['POST'])
-@jwt_required
-@role_required('Doctor', 'Admin')
-def create_diagnosis():
-    data = request.get_json()
-    valid, msg = validate_required(data, ['patient_id', 'diagnosis_name'])
-    if not valid:
-        return jsonify({'error': msg}), 400
-
-    doctor_id = get_doctor_id_for_user(g.current_user['id']) if g.current_user['role'] == 'Doctor' else data.get('diagnosed_by')
-
-    diag_id = execute_db(
-        '''INSERT INTO diagnoses (patient_id, visit_id, icd_code, diagnosis_name, diagnosis_type,
-           severity, status, notes, diagnosed_by, diagnosed_date) VALUES (?,?,?,?,?,?,?,?,?,?)''',
-        [data['patient_id'], data.get('visit_id'), data.get('icd_code'), data['diagnosis_name'],
-         data.get('diagnosis_type', 'Primary'), data.get('severity'), data.get('status', 'Active'),
-         data.get('notes'), doctor_id, data.get('diagnosed_date')]
-    )
-
-    log_audit('CREATE_DIAGNOSIS', 'diagnosis', diag_id)
-    return jsonify({'message': 'Diagnosis added', 'id': diag_id}), 201
 
 
 # ========== ALLERGIES ==========

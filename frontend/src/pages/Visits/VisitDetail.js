@@ -13,7 +13,6 @@ const VisitDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState('overview');
-  const [diagnoses, setDiagnoses] = useState([]);
   const [vitals, setVitals] = useState([]);
   const [notes, setNotes] = useState([]);
   const [showDischarge, setShowDischarge] = useState(false);
@@ -27,7 +26,7 @@ const VisitDetail = () => {
   const fetchVisit = async () => {
     setLoading(true);
     try {
-      const res = await visitsAPI.getById(id);
+      const res = await visitsAPI.get(id);
       setVisit(res.data);
     } catch { setVisit(null); }
     setLoading(false);
@@ -37,9 +36,8 @@ const VisitDetail = () => {
 
   const fetchTabData = async (t) => {
     try {
-      if (t === 'diagnoses') { const r = await clinicalAPI.getDiagnoses({ visit_id: id }); setDiagnoses(r.data.diagnoses || []); }
-      else if (t === 'vitals') { const r = await clinicalAPI.getVitals({ visit_id: id }); setVitals(r.data.vitals || []); }
-      else if (t === 'notes') { const r = await clinicalAPI.getNotes({ visit_id: id }); setNotes(r.data.notes || []); }
+      if (t === 'vitals') { const r = await clinicalAPI.vitals({ visit_id: id }); setVitals(r.data.vitals || []); }
+      else if (t === 'notes') { const r = await clinicalAPI.notes({ visit_id: id }); setNotes(r.data.clinical_notes || []); }
     } catch {}
   };
 
@@ -98,7 +96,7 @@ const VisitDetail = () => {
         </div>
 
         <div className="tab-nav">
-          {['overview', 'diagnoses', 'vitals', 'notes'].map(t => (
+          {['overview', 'vitals', 'notes'].map(t => (
             <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
@@ -120,17 +118,6 @@ const VisitDetail = () => {
             </div>
             {visit.chief_complaint && <div style={{ marginTop: 16 }}><strong>Chief Complaint:</strong><p>{visit.chief_complaint}</p></div>}
             {visit.discharge_summary && <div style={{ marginTop: 16 }}><strong>Discharge Summary:</strong><p>{visit.discharge_summary}</p></div>}
-          </div>
-        )}
-
-        {tab === 'diagnoses' && (
-          <div className="card">
-            <div className="card-header"><h3>Diagnoses</h3></div>
-            {diagnoses.length === 0 ? <p style={{ color: '#999', padding: 20 }}>No diagnoses recorded</p> : (
-              <table><thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Severity</th><th>Date</th></tr></thead>
-                <tbody>{diagnoses.map(d => <tr key={d.id}><td>{d.icd_code || '-'}</td><td>{d.diagnosis_name}</td><td>{d.diagnosis_type}</td><td>{d.severity}</td><td>{d.diagnosed_date}</td></tr>)}</tbody>
-              </table>
-            )}
           </div>
         )}
 

@@ -13,7 +13,7 @@ def allowed_file(filename):
 def save_upload(file, subfolder='general'):
     """Save an uploaded file and return the saved filename and path."""
     if not file or not file.filename:
-        return None, None
+        return None, None, None, None
 
     ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'bin'
     safe_name = f"{uuid.uuid4().hex}.{ext}"

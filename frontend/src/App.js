@@ -24,6 +24,7 @@ import ReportDetail from './pages/Reports/ReportDetail';
 import PrescriptionList from './pages/Prescriptions/PrescriptionList';
 import PrescriptionDetail from './pages/Prescriptions/PrescriptionDetail';
 import InvoiceList from './pages/Billing/InvoiceList';
+import InvoiceCreate from './pages/Billing/InvoiceCreate';
 import InvoiceDetail from './pages/Billing/InvoiceDetail';
 import UsersPage from './pages/Users';
 import AuditLogsPage from './pages/AuditLogs';
@@ -90,6 +91,11 @@ function App() {
 
             {/* Billing */}
             <Route path="/billing" element={<InvoiceList />} />
+            <Route path="/billing/new" element={
+              <ProtectedRoute roles={['Admin', 'Staff']}>
+                <InvoiceCreate />
+              </ProtectedRoute>
+            } />
             <Route path="/billing/:id" element={<InvoiceDetail />} />
 
             {/* Notifications */}

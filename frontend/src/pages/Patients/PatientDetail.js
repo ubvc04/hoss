@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { patientsAPI, visitsAPI, clinicalAPI, prescriptionsAPI, reportsAPI, billingAPI, appointmentsAPI } from '../../api/axios';
+import { patientsAPI, visitsAPI, prescriptionsAPI, reportsAPI, billingAPI, appointmentsAPI } from '../../api/axios';
 import Topbar from '../../components/Layout/Topbar';
 import { Loading, DetailItem, Badge, EmptyState } from '../../components/Common';
 
@@ -35,11 +35,6 @@ const PatientDetail = () => {
           const res = await visitsAPI.list({ patient_id: patientId });
           setTabData(prev => ({ ...prev, visits: res.data.visits }));
         }
-        if (tab === 'diagnoses' && !tabData.diagnoses) {
-          const res = await clinicalAPI.diagnoses({ patient_id: patientId });
-          setTabData(prev => ({ ...prev, diagnoses: res.data.diagnoses }));
-        }
-
         if (tab === 'prescriptions' && !tabData.prescriptions) {
           const res = await prescriptionsAPI.list({ patient_id: patientId });
           setTabData(prev => ({ ...prev, prescriptions: res.data.prescriptions }));
@@ -64,7 +59,7 @@ const PatientDetail = () => {
   if (loading) return <><Topbar title="Patient Details" /><div className="page-content"><Loading /></div></>;
   if (!patient) return <><Topbar title="Patient Details" /><div className="page-content"><EmptyState message="Patient not found" /></div></>;
 
-  const tabs = ['overview', 'visits', 'diagnoses', 'prescriptions', 'reports', 'billing', 'appointments'];
+  const tabs = ['overview', 'visits', 'prescriptions', 'reports', 'billing', 'appointments'];
   const canManage = ['Admin', 'Staff', 'Doctor'].includes(user.role);
 
   return (
@@ -145,33 +140,6 @@ const PatientDetail = () => {
                         <td>{v.department_name || '—'}</td>
                         <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.chief_complaint || '—'}</td>
                         <td>{v.ward ? `${v.ward} / ${v.bed_number || '—'}` : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* DIAGNOSES */}
-        {tab === 'diagnoses' && (
-          <div className="card">
-            <div className="card-header"><h3>Diagnoses</h3></div>
-            {!tabData.diagnoses ? <Loading /> : tabData.diagnoses.length === 0 ? <EmptyState message="No diagnoses recorded" /> : (
-              <div className="table-wrapper">
-                <table>
-                  <thead><tr><th>Diagnosis</th><th>ICD Code</th><th>Type</th><th>Severity</th><th>Status</th><th>Doctor</th><th>Date</th></tr></thead>
-                  <tbody>
-                    {tabData.diagnoses.map(d => (
-                      <tr key={d.id}>
-                        <td><strong>{d.diagnosis_name}</strong></td>
-                        <td>{d.icd_code || '—'}</td>
-                        <td>{d.diagnosis_type}</td>
-                        <td>{d.severity ? <Badge status={d.severity} /> : '—'}</td>
-                        <td><Badge status={d.status} /></td>
-                        <td>{d.doctor_name || '—'}</td>
-                        <td>{d.diagnosed_date}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -76,8 +76,6 @@ export const visitsAPI = {
 
 // ============ CLINICAL ============
 export const clinicalAPI = {
-  diagnoses: (params) => api.get('/diagnoses', { params }),
-  createDiagnosis: (data) => api.post('/diagnoses', data),
   allergies: (params) => api.get('/allergies', { params }),
   createAllergy: (data) => api.post('/allergies', data),
   vitals: (params) => api.get('/vitals', { params }),
