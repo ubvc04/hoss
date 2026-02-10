@@ -17,7 +17,7 @@ const AuditLogsPage = () => {
       const params = { page, per_page: 25 };
       if (actionFilter) params.action = actionFilter;
       const res = await auditAPI.getAll(params);
-      setLogs(res.data.logs || []);
+      setLogs(res.data.audit_logs || []);
       setTotal(res.data.total || 0);
     } catch { setLogs([]); setTotal(0); }
     setLoading(false);
