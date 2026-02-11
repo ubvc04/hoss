@@ -44,7 +44,7 @@ const PatientList = () => {
               />
             </div>
             {['Admin', 'Staff'].includes(user.role) && (
-              <button className="btn btn-primary" onClick={() => navigate('/patients/new')}>
+              <button className="btn btn-primary" onClick={() => navigate('/patients/register')}>
                 + Register Patient
               </button>
             )}

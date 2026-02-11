@@ -75,21 +75,33 @@ def get_patient(patient_id):
 @role_required('Admin', 'Staff')
 def create_patient():
     data = request.get_json()
-    valid, msg = validate_required(data, ['first_name', 'last_name', 'date_of_birth', 'gender'])
+    valid, msg = validate_required(data, ['first_name', 'last_name', 'date_of_birth', 'gender', 'username', 'password'])
     if not valid:
         return jsonify({'error': msg}), 400
 
     mrn = generate_mrn()
 
     # Create user account for patient
-    password = data.get('password', 'Patient@123')
+    username = data['username'].strip()
+    password = data['password']
+    
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+    if not password:
+        return jsonify({'error': 'Password is required'}), 400
+    
     pw_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    # Check if username already exists
+    existing_user = query_db('SELECT id FROM users WHERE username=?', [username], one=True)
+    if existing_user:
+        return jsonify({'error': f'Username "{username}" already exists'}), 400
 
     patient_role = query_db('SELECT id FROM roles WHERE name=?', ['Patient'], one=True)
 
     user_id = execute_db(
-        'INSERT INTO users (username, password_hash, email, phone, role_id, must_change_password) VALUES (?,?,?,?,?,1)',
-        [mrn, pw_hash, data.get('email'), data.get('phone'), patient_role['id']]
+        'INSERT INTO users (username, password_hash, email, phone, role_id, must_change_password) VALUES (?,?,?,?,?,0)',
+        [username, pw_hash, data.get('email'), data.get('phone'), patient_role['id']]
     )
 
     patient_id = execute_db(
@@ -126,7 +138,7 @@ def create_patient():
         'message': 'Patient created',
         'patient_id': patient_id,
         'mrn': mrn,
-        'username': mrn,
+        'username': username,
         'password': password
     }), 201
 

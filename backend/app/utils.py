@@ -28,12 +28,19 @@ def save_upload(file, subfolder='general'):
 def generate_mrn():
     """Generate a unique MRN like PAT-00001."""
     from .database import query_db
-    row = query_db("SELECT mrn FROM patients ORDER BY id DESC LIMIT 1", one=True)
-    if row and row['mrn']:
-        num = int(row['mrn'].split('-')[1]) + 1
-    else:
-        num = 1
-    return f"PAT-{num:05d}"
+    # Get the highest numeric MRN
+    rows = query_db("SELECT mrn FROM patients WHERE mrn LIKE 'PAT-%' ORDER BY id DESC")
+    max_num = 0
+    for row in rows:
+        try:
+            parts = row['mrn'].split('-')
+            if len(parts) == 2:
+                num = int(parts[1])
+                if num > max_num:
+                    max_num = num
+        except (ValueError, IndexError):
+            continue
+    return f"PAT-{max_num + 1:05d}"
 
 
 def generate_invoice_number():

@@ -72,11 +72,8 @@ const Login = () => {
           </Link>
         </div>
 
-        <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
-          <span style={{ fontSize: 14, color: '#666' }}>Need to create an account? </span>
-          <Link to="/signup" style={{ color: '#2563eb', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-            Sign Up
-          </Link>
+        <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: 13, color: '#666' }}>
+          Contact hospital administration to create an account
         </div>
       </div>
     </div>
