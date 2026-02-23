@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, g
 from ..database import query_db, execute_db, dicts_from_rows, dict_from_row
 from ..middleware import jwt_required, role_required, get_patient_id_for_user, get_doctor_id_for_user, log_audit
 from ..utils import validate_required, parse_pagination
+from ..blockchain import get_blockchain_service
 
 visits_bp = Blueprint('visits', __name__, url_prefix='/api/visits')
 
@@ -102,6 +103,21 @@ def create_visit():
     )
 
     log_audit('CREATE_VISIT', 'visit', visit_id, f"Created {data['visit_type']} visit for patient {data['patient_id']}")
+
+    # Store visit hash on blockchain
+    try:
+        blockchain_service = get_blockchain_service()
+        visit_record = query_db('SELECT * FROM visits WHERE id=?', [visit_id], one=True)
+        if visit_record:
+            blockchain_service.store_visit(
+                visit_id,
+                data['patient_id'],
+                dict_from_row(visit_record),
+                metadata={'createdBy': g.current_user['id']}
+            )
+    except Exception as e:
+        print(f"Blockchain store error: {e}")
+
     return jsonify({'message': 'Visit created', 'visit_id': visit_id}), 201
 
 
@@ -132,4 +148,19 @@ def update_visit(visit_id):
     execute_db(f"UPDATE visits SET {', '.join(updates)} WHERE id=?", args)
 
     log_audit('UPDATE_VISIT', 'visit', visit_id)
+
+    # Update blockchain hash
+    try:
+        blockchain_service = get_blockchain_service()
+        updated_visit = query_db('SELECT * FROM visits WHERE id=?', [visit_id], one=True)
+        if updated_visit:
+            blockchain_service.store_visit(
+                visit_id,
+                updated_visit['patient_id'],
+                dict_from_row(updated_visit),
+                metadata={'updatedBy': g.current_user['id'], 'action': 'UPDATE'}
+            )
+    except Exception as e:
+        print(f"Blockchain update error: {e}")
+
     return jsonify({'message': 'Visit updated'}), 200

@@ -32,6 +32,7 @@ def create_app():
     from .routes.notifications import notifications_bp
     from .routes.audit import audit_bp
     from .routes.dashboard import dashboard_bp
+    from .routes.blockchain import blockchain_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
@@ -45,6 +46,7 @@ def create_app():
     app.register_blueprint(notifications_bp)
     app.register_blueprint(audit_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(blockchain_bp, url_prefix='/api/blockchain')
 
     # Seed data on first run
     if is_new:

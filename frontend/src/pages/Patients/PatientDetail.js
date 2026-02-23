@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { patientsAPI, visitsAPI, prescriptionsAPI, reportsAPI, billingAPI, appointmentsAPI } from '../../api/axios';
 import Topbar from '../../components/Layout/Topbar';
 import { Loading, DetailItem, Badge, EmptyState } from '../../components/Common';
+import BlockchainRecords from '../../components/Blockchain/BlockchainRecords';
 
 const PatientDetail = () => {
   const { id } = useParams();
@@ -59,7 +60,7 @@ const PatientDetail = () => {
   if (loading) return <><Topbar title="Patient Details" /><div className="page-content"><Loading /></div></>;
   if (!patient) return <><Topbar title="Patient Details" /><div className="page-content"><EmptyState message="Patient not found" /></div></>;
 
-  const tabs = ['overview', 'visits', 'prescriptions', 'reports', 'billing', 'appointments'];
+  const tabs = ['overview', 'visits', 'prescriptions', 'reports', 'billing', 'appointments', 'blockchain'];
   const canManage = ['Admin', 'Staff', 'Doctor'].includes(user.role);
 
   return (
@@ -260,6 +261,11 @@ const PatientDetail = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* BLOCKCHAIN */}
+        {tab === 'blockchain' && (
+          <BlockchainRecords patientId={patientId} />
         )}
       </div>
     </>

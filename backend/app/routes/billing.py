@@ -4,6 +4,7 @@ from ..database import query_db, execute_db, dicts_from_rows, dict_from_row
 from ..middleware import jwt_required, role_required, get_patient_id_for_user, log_audit
 from ..utils import validate_required, generate_invoice_number, parse_pagination, allowed_file, save_upload
 from ..config import Config
+from ..blockchain import get_blockchain_service
 
 billing_bp = Blueprint('billing', __name__, url_prefix='/api/invoices')
 
@@ -109,6 +110,23 @@ def create_invoice():
         )
 
     log_audit('CREATE_INVOICE', 'invoice', invoice_id, f"Invoice {invoice_number}")
+
+    # Store invoice hash on blockchain
+    try:
+        blockchain_service = get_blockchain_service()
+        inv_record = query_db('SELECT * FROM invoices WHERE id=?', [invoice_id], one=True)
+        items = dicts_from_rows(query_db('SELECT * FROM invoice_items WHERE invoice_id=?', [invoice_id]))
+        if inv_record:
+            blockchain_service.store_invoice(
+                invoice_id,
+                data['patient_id'],
+                dict_from_row(inv_record),
+                items,
+                metadata={'createdBy': g.current_user['id']}
+            )
+    except Exception as e:
+        print(f"Blockchain store error: {e}")
+
     return jsonify({'message': 'Invoice created', 'id': invoice_id, 'invoice_number': invoice_number}), 201
 
 

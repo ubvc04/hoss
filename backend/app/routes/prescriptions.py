@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, g
 from ..database import query_db, execute_db, dicts_from_rows, dict_from_row
 from ..middleware import jwt_required, role_required, get_patient_id_for_user, get_doctor_id_for_user, log_audit
 from ..utils import validate_required
+from ..blockchain import get_blockchain_service
 
 prescriptions_bp = Blueprint('prescriptions', __name__, url_prefix='/api/prescriptions')
 
@@ -121,4 +122,21 @@ def create_prescription():
         )
 
     log_audit('CREATE_PRESCRIPTION', 'prescription', rx_id)
+
+    # Store prescription hash on blockchain
+    try:
+        blockchain_service = get_blockchain_service()
+        rx_record = query_db('SELECT * FROM prescriptions WHERE id=?', [rx_id], one=True)
+        meds = dicts_from_rows(query_db('SELECT * FROM medications WHERE prescription_id=?', [rx_id]))
+        if rx_record:
+            blockchain_service.store_prescription(
+                rx_id,
+                data['patient_id'],
+                dict_from_row(rx_record),
+                meds,
+                metadata={'createdBy': g.current_user['id']}
+            )
+    except Exception as e:
+        print(f"Blockchain store error: {e}")
+
     return jsonify({'message': 'Prescription created', 'id': rx_id}), 201

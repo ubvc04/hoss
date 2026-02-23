@@ -4,6 +4,7 @@ from ..database import query_db, execute_db, dicts_from_rows, dict_from_row
 from ..middleware import jwt_required, role_required, get_patient_id_for_user, log_audit
 from ..utils import allowed_file, save_upload, validate_required, parse_pagination
 from ..config import Config
+from ..blockchain import get_blockchain_service
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
 
@@ -114,8 +115,15 @@ def create_report():
 
     # Handle file uploads
     files = request.files.getlist('files')
+    file_data = None
+    filename = None
     for f in files:
         if f and allowed_file(f.filename):
+            # Read file data for blockchain hashing before saving
+            if file_data is None:
+                file_data = f.read()
+                filename = f.filename
+                f.seek(0)  # Reset stream for save_upload
             safe_name, rel_path, file_size, mime_type = save_upload(f, f'reports/{report_id}')
             execute_db(
                 '''INSERT INTO report_files (report_id, file_name, original_name, file_path, file_size, mime_type)
@@ -135,6 +143,24 @@ def create_report():
         )
 
     log_audit('CREATE_REPORT', 'report', report_id)
+
+    # Store report hash on blockchain (with file if available)
+    try:
+        blockchain_service = get_blockchain_service()
+        report_record = query_db('SELECT * FROM reports WHERE id=?', [report_id], one=True)
+        if report_record:
+            blockchain_service.store_report(
+                report_id,
+                patient_id,
+                dict_from_row(report_record),
+                file_data=file_data,
+                filename=filename,
+                upload_to_ipfs=True,  # IPFS enabled with Pinata
+                metadata={'createdBy': g.current_user['id']}
+            )
+    except Exception as e:
+        print(f"Blockchain store error: {e}")
+
     return jsonify({'message': 'Report created', 'id': report_id}), 201
 
 

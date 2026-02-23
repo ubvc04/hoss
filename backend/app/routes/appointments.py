@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, g
 from ..database import query_db, execute_db, dicts_from_rows, dict_from_row
 from ..middleware import jwt_required, role_required, get_patient_id_for_user, get_doctor_id_for_user, log_audit
 from ..utils import validate_required, parse_pagination
+from ..blockchain import get_blockchain_service
 
 appointments_bp = Blueprint('appointments', __name__, url_prefix='/api/appointments')
 
@@ -133,6 +134,21 @@ def create_appointment():
             )
 
     log_audit('CREATE_APPOINTMENT', 'appointment', appt_id)
+
+    # Store appointment hash on blockchain
+    try:
+        blockchain_service = get_blockchain_service()
+        appt_record = query_db('SELECT * FROM appointments WHERE id=?', [appt_id], one=True)
+        if appt_record:
+            blockchain_service.store_appointment(
+                appt_id,
+                data['patient_id'],
+                dict_from_row(appt_record),
+                metadata={'createdBy': g.current_user['id']}
+            )
+    except Exception as e:
+        print(f"Blockchain store error: {e}")
+
     return jsonify({'message': 'Appointment created', 'id': appt_id}), 201
 
 
@@ -179,4 +195,19 @@ def update_appointment(appt_id):
         )
 
     log_audit('UPDATE_APPOINTMENT', 'appointment', appt_id, f"Status: {data.get('status', 'updated')}")
+
+    # Update blockchain hash
+    try:
+        blockchain_service = get_blockchain_service()
+        updated_appt = query_db('SELECT * FROM appointments WHERE id=?', [appt_id], one=True)
+        if updated_appt:
+            blockchain_service.store_appointment(
+                appt_id,
+                updated_appt['patient_id'],
+                dict_from_row(updated_appt),
+                metadata={'updatedBy': g.current_user['id'], 'action': 'UPDATE'}
+            )
+    except Exception as e:
+        print(f"Blockchain update error: {e}")
+
     return jsonify({'message': 'Appointment updated'}), 200

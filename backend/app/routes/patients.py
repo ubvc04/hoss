@@ -3,6 +3,7 @@ import bcrypt
 from ..database import query_db, execute_db, dicts_from_rows, dict_from_row
 from ..middleware import jwt_required, role_required, get_patient_id_for_user, log_audit
 from ..utils import validate_required, generate_mrn, parse_pagination
+from ..blockchain import get_blockchain_service
 
 patients_bp = Blueprint('patients', __name__, url_prefix='/api/patients')
 
@@ -134,6 +135,20 @@ def create_patient():
 
     log_audit('CREATE_PATIENT', 'patient', patient_id, f"Created patient {mrn}")
 
+    # Store patient hash on blockchain
+    try:
+        blockchain_service = get_blockchain_service()
+        patient_record = query_db('SELECT * FROM patients WHERE id=?', [patient_id], one=True)
+        if patient_record:
+            blockchain_result = blockchain_service.store_patient(
+                patient_id,
+                dict_from_row(patient_record),
+                metadata={'createdBy': g.current_user['id']}
+            )
+    except Exception as e:
+        # Log blockchain error but don't fail the patient creation
+        print(f"Blockchain store error: {e}")
+
     return jsonify({
         'message': 'Patient created',
         'patient_id': patient_id,
@@ -187,6 +202,20 @@ def update_patient(patient_id):
     execute_db(f"UPDATE patients SET {', '.join(updates)} WHERE id=?", args)
 
     log_audit('UPDATE_PATIENT', 'patient', patient_id, f"Updated patient {patient['mrn']}")
+
+    # Update blockchain hash
+    try:
+        blockchain_service = get_blockchain_service()
+        updated_patient = query_db('SELECT * FROM patients WHERE id=?', [patient_id], one=True)
+        if updated_patient:
+            blockchain_service.store_patient(
+                patient_id,
+                dict_from_row(updated_patient),
+                metadata={'updatedBy': g.current_user['id'], 'action': 'UPDATE'}
+            )
+    except Exception as e:
+        print(f"Blockchain update error: {e}")
+
     return jsonify({'message': 'Patient updated'}), 200
 
 
